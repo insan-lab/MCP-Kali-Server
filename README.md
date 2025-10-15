@@ -45,10 +45,69 @@ https://github.com/user-attachments/assets/3ec06ff8-0bdf-4ad5-be71-2ec490b7ee27
 ## 🛠️ Installation
 
 ### On your Linux Machine (Will act as MCP Server)
+
+#### Basic Installation
 ```bash
 git clone https://github.com/Wh0am123/MCP-Kali-Server.git
 cd MCP-Kali-Server
+
+# Install dependencies
+pip3 install -r requirements.txt
+
+# Run in development mode (not recommended for production)
 python3 kali_server.py
+```
+
+#### Production Deployment (Recommended)
+For production environments, use the `--production` flag to run with Waitress, a production-ready WSGI server:
+
+```bash
+# Install dependencies including production server
+pip3 install -r requirements.txt
+
+# Run in production mode
+python3 kali_server.py --production
+
+# Optional: Specify custom port and host
+python3 kali_server.py --production --port 5000 --host 0.0.0.0
+```
+
+**Production Mode Features:**
+- Uses Waitress WSGI server (more stable and secure)
+- Multi-threaded request handling
+- Better performance under load
+- Automatic debug mode disabling
+
+**Available Command Line Options:**
+- `--production` - Run with Waitress production server (recommended)
+- `--port PORT` - Specify port number (default: 5000)
+- `--host HOST` - Specify host address (default: 0.0.0.0)
+- `--debug` - Enable debug mode (development only)
+
+#### API Endpoints
+The server exposes several endpoints for tool execution and monitoring:
+
+**Health and Capabilities:**
+- `GET /health` - Check server health and tool availability
+- `GET /mcp/capabilities` - Get list of available tools and their parameters
+
+**Tool Execution:**
+- `POST /api/command` - Execute any shell command
+- `POST /api/tools/<tool_name>` - Execute specific tool (nmap, gobuster, etc.)
+- `POST /mcp/tools/kali_tools/<tool_name>` - Dynamic tool execution endpoint
+
+**Example API Usage:**
+```bash
+# Check server health
+curl http://localhost:5000/health
+
+# Get available tools
+curl http://localhost:5000/mcp/capabilities
+
+# Execute nmap scan
+curl -X POST http://localhost:5000/api/tools/nmap \
+  -H "Content-Type: application/json" \
+  -d '{"target": "127.0.0.1", "scan_type": "-sV"}'
 ```
 
 ### On your MCP Client (You can run on Windows or Linux)
