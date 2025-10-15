@@ -140,6 +140,25 @@ def execute_command(command: str) -> Dict[str, Any]:
     return executor.execute()
 
 
+def handle_error(e: Exception, endpoint: str) -> tuple:
+    """
+    Handle errors consistently across endpoints.
+    
+    Args:
+        e: The exception that occurred
+        endpoint: Name of the endpoint where error occurred
+        
+    Returns:
+        Tuple of (jsonify response, status code)
+    """
+    logger.error(f"Error in {endpoint}: {str(e)}")
+    logger.error(traceback.format_exc())
+    
+    # Never expose detailed errors to clients for security
+    # Details are logged for admin review
+    return jsonify({"error": "Internal server error occurred"}), 500
+
+
 @app.route("/api/command", methods=["POST"])
 def generic_command():
     """Execute any command provided in the request."""
@@ -156,11 +175,7 @@ def generic_command():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in command endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "command endpoint")
 
 
 @app.route("/api/tools/nmap", methods=["POST"])
@@ -193,11 +208,7 @@ def nmap():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in nmap endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "nmap endpoint")
 
 @app.route("/api/tools/gobuster", methods=["POST"])
 def gobuster():
@@ -230,11 +241,7 @@ def gobuster():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in gobuster endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "gobuster endpoint")
 
 @app.route("/api/tools/dirb", methods=["POST"])
 def dirb():
@@ -259,11 +266,7 @@ def dirb():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in dirb endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "dirb endpoint")
 
 @app.route("/api/tools/nikto", methods=["POST"])
 def nikto():
@@ -287,11 +290,7 @@ def nikto():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in nikto endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "nikto endpoint")
 
 @app.route("/api/tools/sqlmap", methods=["POST"])
 def sqlmap():
@@ -319,11 +318,7 @@ def sqlmap():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in sqlmap endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "sqlmap endpoint")
 
 @app.route("/api/tools/metasploit", methods=["POST"])
 def metasploit():
@@ -366,11 +361,7 @@ def metasploit():
         
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in metasploit endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "metasploit endpoint")
 
 @app.route("/api/tools/hydra", methods=["POST"])
 def hydra():
@@ -417,11 +408,7 @@ def hydra():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in hydra endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "hydra endpoint")
 
 @app.route("/api/tools/john", methods=["POST"])
 def john():
@@ -455,11 +442,7 @@ def john():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in john endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "john endpoint")
 
 @app.route("/api/tools/wpscan", methods=["POST"])
 def wpscan():
@@ -483,11 +466,7 @@ def wpscan():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in wpscan endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "wpscan endpoint")
 
 @app.route("/api/tools/enum4linux", methods=["POST"])
 def enum4linux():
@@ -508,11 +487,7 @@ def enum4linux():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in enum4linux endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "enum4linux endpoint")
 
 
 # Health check endpoint
@@ -541,19 +516,138 @@ def health_check():
 
 @app.route("/mcp/capabilities", methods=["GET"])
 def get_capabilities():
-    # Return tool capabilities similar to our existing MCP server
-    pass
+    """Return MCP server capabilities and available tools."""
+    capabilities = {
+        "server": "Kali Linux Tools API Server",
+        "version": "1.0.0",
+        "tools": {
+            "nmap": {
+                "description": "Network exploration and security auditing tool",
+                "endpoint": "/api/tools/nmap",
+                "parameters": ["target", "scan_type", "ports", "additional_args"]
+            },
+            "gobuster": {
+                "description": "Directory/file, DNS and VHost busting tool",
+                "endpoint": "/api/tools/gobuster",
+                "parameters": ["url", "mode", "wordlist", "additional_args"]
+            },
+            "dirb": {
+                "description": "Web content scanner",
+                "endpoint": "/api/tools/dirb",
+                "parameters": ["url", "wordlist", "additional_args"]
+            },
+            "nikto": {
+                "description": "Web server scanner",
+                "endpoint": "/api/tools/nikto",
+                "parameters": ["target", "additional_args"]
+            },
+            "sqlmap": {
+                "description": "SQL injection detection and exploitation tool",
+                "endpoint": "/api/tools/sqlmap",
+                "parameters": ["url", "data", "additional_args"]
+            },
+            "metasploit": {
+                "description": "Penetration testing framework",
+                "endpoint": "/api/tools/metasploit",
+                "parameters": ["module", "options"]
+            },
+            "hydra": {
+                "description": "Password cracking tool",
+                "endpoint": "/api/tools/hydra",
+                "parameters": ["target", "service", "username", "username_file", "password", "password_file", "additional_args"]
+            },
+            "john": {
+                "description": "John the Ripper password cracker",
+                "endpoint": "/api/tools/john",
+                "parameters": ["hash_file", "wordlist", "format", "additional_args"]
+            },
+            "wpscan": {
+                "description": "WordPress vulnerability scanner",
+                "endpoint": "/api/tools/wpscan",
+                "parameters": ["url", "additional_args"]
+            },
+            "enum4linux": {
+                "description": "Windows/Samba enumeration tool",
+                "endpoint": "/api/tools/enum4linux",
+                "parameters": ["target", "additional_args"]
+            }
+        },
+        "generic_command": {
+            "description": "Execute any shell command",
+            "endpoint": "/api/command",
+            "parameters": ["command"]
+        }
+    }
+    return jsonify(capabilities)
 
 @app.route("/mcp/tools/kali_tools/<tool_name>", methods=["POST"])
 def execute_tool(tool_name):
-    # Direct tool execution without going through the API server
-    pass
+    """
+    Dynamic tool execution endpoint.
+    Routes to the appropriate tool handler based on tool_name.
+    """
+    try:
+        params = request.json if request.json else {}
+        
+        # Map tool names to their handler functions
+        tool_handlers = {
+            "nmap": nmap,
+            "gobuster": gobuster,
+            "dirb": dirb,
+            "nikto": nikto,
+            "sqlmap": sqlmap,
+            "metasploit": metasploit,
+            "hydra": hydra,
+            "john": john,
+            "wpscan": wpscan,
+            "enum4linux": enum4linux
+        }
+        
+        if tool_name not in tool_handlers:
+            logger.warning(f"Unknown tool requested: {tool_name}")
+            return jsonify({
+                "error": f"Unknown tool: {tool_name}",
+                "available_tools": list(tool_handlers.keys())
+            }), 404
+        
+        # Call the appropriate handler
+        logger.info(f"Executing tool via dynamic endpoint: {tool_name}")
+        return tool_handlers[tool_name]()
+        
+    except Exception as e:
+        return handle_error(e, f"dynamic tool execution for {tool_name}")
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors with a helpful message."""
+    return jsonify({
+        "error": "Endpoint not found",
+        "message": "The requested endpoint does not exist",
+        "available_endpoints": {
+            "health": "/health (GET)",
+            "capabilities": "/mcp/capabilities (GET)",
+            "generic_command": "/api/command (POST)",
+            "tools": "/api/tools/<tool_name> (POST)",
+            "dynamic_tools": "/mcp/tools/kali_tools/<tool_name> (POST)"
+        }
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors."""
+    logger.error(f"Internal server error: {str(error)}")
+    return jsonify({
+        "error": "Internal server error",
+        "message": "An unexpected error occurred"
+    }), 500
 
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Run the Kali Linux API Server")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--port", type=int, default=API_PORT, help=f"Port for the API server (default: {API_PORT})")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
+    parser.add_argument("--production", action="store_true", help="Run with production server (Waitress)")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -568,5 +662,29 @@ if __name__ == "__main__":
     if args.port != API_PORT:
         API_PORT = args.port
     
-    logger.info(f"Starting Kali Linux Tools API Server on port {API_PORT}")
-    app.run(host="0.0.0.0", port=API_PORT, debug=DEBUG_MODE)
+    # Run with production server if requested
+    if args.production:
+        try:
+            from waitress import serve
+            logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Production Mode with Waitress)")
+            logger.warning("Production mode: Debug mode is disabled")
+            # Force debug mode off in production
+            DEBUG_MODE = False
+            serve(app, host=args.host, port=API_PORT, threads=4)
+        except ImportError:
+            logger.error("Waitress is not installed. Install it with: pip install waitress")
+            logger.info("Falling back to development server...")
+            logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Development Mode)")
+            # Force debug off when falling back in production mode
+            app.run(host=args.host, port=API_PORT, debug=False)
+    else:
+        logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Development Mode)")
+        if not DEBUG_MODE:
+            logger.warning("Running development server in production is not recommended.")
+            logger.warning("Use --production flag to run with Waitress for production deployments.")
+        # Only enable debug in development mode if explicitly requested with --debug flag
+        # This is safe: both DEBUG_MODE and args.debug must be True
+        enable_debug = bool(DEBUG_MODE and args.debug)
+        if enable_debug:
+            logger.warning("Debug mode is enabled - this should only be used in development!")
+        app.run(host=args.host, port=API_PORT, debug=enable_debug)
