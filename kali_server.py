@@ -541,19 +541,142 @@ def health_check():
 
 @app.route("/mcp/capabilities", methods=["GET"])
 def get_capabilities():
-    # Return tool capabilities similar to our existing MCP server
-    pass
+    """Return MCP server capabilities and available tools."""
+    capabilities = {
+        "server": "Kali Linux Tools API Server",
+        "version": "1.0.0",
+        "tools": {
+            "nmap": {
+                "description": "Network exploration and security auditing tool",
+                "endpoint": "/api/tools/nmap",
+                "parameters": ["target", "scan_type", "ports", "additional_args"]
+            },
+            "gobuster": {
+                "description": "Directory/file, DNS and VHost busting tool",
+                "endpoint": "/api/tools/gobuster",
+                "parameters": ["url", "mode", "wordlist", "additional_args"]
+            },
+            "dirb": {
+                "description": "Web content scanner",
+                "endpoint": "/api/tools/dirb",
+                "parameters": ["url", "wordlist", "additional_args"]
+            },
+            "nikto": {
+                "description": "Web server scanner",
+                "endpoint": "/api/tools/nikto",
+                "parameters": ["target", "additional_args"]
+            },
+            "sqlmap": {
+                "description": "SQL injection detection and exploitation tool",
+                "endpoint": "/api/tools/sqlmap",
+                "parameters": ["url", "data", "additional_args"]
+            },
+            "metasploit": {
+                "description": "Penetration testing framework",
+                "endpoint": "/api/tools/metasploit",
+                "parameters": ["module", "options"]
+            },
+            "hydra": {
+                "description": "Password cracking tool",
+                "endpoint": "/api/tools/hydra",
+                "parameters": ["target", "service", "username", "username_file", "password", "password_file", "additional_args"]
+            },
+            "john": {
+                "description": "John the Ripper password cracker",
+                "endpoint": "/api/tools/john",
+                "parameters": ["hash_file", "wordlist", "format", "additional_args"]
+            },
+            "wpscan": {
+                "description": "WordPress vulnerability scanner",
+                "endpoint": "/api/tools/wpscan",
+                "parameters": ["url", "additional_args"]
+            },
+            "enum4linux": {
+                "description": "Windows/Samba enumeration tool",
+                "endpoint": "/api/tools/enum4linux",
+                "parameters": ["target", "additional_args"]
+            }
+        },
+        "generic_command": {
+            "description": "Execute any shell command",
+            "endpoint": "/api/command",
+            "parameters": ["command"]
+        }
+    }
+    return jsonify(capabilities)
 
 @app.route("/mcp/tools/kali_tools/<tool_name>", methods=["POST"])
 def execute_tool(tool_name):
-    # Direct tool execution without going through the API server
-    pass
+    """
+    Dynamic tool execution endpoint.
+    Routes to the appropriate tool handler based on tool_name.
+    """
+    try:
+        params = request.json if request.json else {}
+        
+        # Map tool names to their handler functions
+        tool_handlers = {
+            "nmap": nmap,
+            "gobuster": gobuster,
+            "dirb": dirb,
+            "nikto": nikto,
+            "sqlmap": sqlmap,
+            "metasploit": metasploit,
+            "hydra": hydra,
+            "john": john,
+            "wpscan": wpscan,
+            "enum4linux": enum4linux
+        }
+        
+        if tool_name not in tool_handlers:
+            logger.warning(f"Unknown tool requested: {tool_name}")
+            return jsonify({
+                "error": f"Unknown tool: {tool_name}",
+                "available_tools": list(tool_handlers.keys())
+            }), 404
+        
+        # Call the appropriate handler
+        logger.info(f"Executing tool via dynamic endpoint: {tool_name}")
+        return tool_handlers[tool_name]()
+        
+    except Exception as e:
+        logger.error(f"Error in dynamic tool execution for {tool_name}: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "error": f"Server error: {str(e)}"
+        }), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors with a helpful message."""
+    return jsonify({
+        "error": "Endpoint not found",
+        "message": "The requested endpoint does not exist",
+        "available_endpoints": {
+            "health": "/health (GET)",
+            "capabilities": "/mcp/capabilities (GET)",
+            "generic_command": "/api/command (POST)",
+            "tools": "/api/tools/<tool_name> (POST)",
+            "dynamic_tools": "/mcp/tools/kali_tools/<tool_name> (POST)"
+        }
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors."""
+    logger.error(f"Internal server error: {str(error)}")
+    return jsonify({
+        "error": "Internal server error",
+        "message": "An unexpected error occurred"
+    }), 500
 
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Run the Kali Linux API Server")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--port", type=int, default=API_PORT, help=f"Port for the API server (default: {API_PORT})")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
+    parser.add_argument("--production", action="store_true", help="Run with production server (Waitress)")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -568,5 +691,21 @@ if __name__ == "__main__":
     if args.port != API_PORT:
         API_PORT = args.port
     
-    logger.info(f"Starting Kali Linux Tools API Server on port {API_PORT}")
-    app.run(host="0.0.0.0", port=API_PORT, debug=DEBUG_MODE)
+    # Run with production server if requested
+    if args.production:
+        try:
+            from waitress import serve
+            logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Production Mode with Waitress)")
+            logger.warning("Production mode: Debug mode is disabled")
+            serve(app, host=args.host, port=API_PORT, threads=4)
+        except ImportError:
+            logger.error("Waitress is not installed. Install it with: pip install waitress")
+            logger.info("Falling back to development server...")
+            logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Development Mode)")
+            app.run(host=args.host, port=API_PORT, debug=DEBUG_MODE)
+    else:
+        logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Development Mode)")
+        if not DEBUG_MODE:
+            logger.warning("Running development server in production is not recommended.")
+            logger.warning("Use --production flag to run with Waitress for production deployments.")
+        app.run(host=args.host, port=API_PORT, debug=DEBUG_MODE)
