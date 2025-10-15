@@ -140,6 +140,29 @@ def execute_command(command: str) -> Dict[str, Any]:
     return executor.execute()
 
 
+def handle_error(e: Exception, endpoint: str) -> tuple:
+    """
+    Handle errors consistently across endpoints.
+    
+    Args:
+        e: The exception that occurred
+        endpoint: Name of the endpoint where error occurred
+        
+    Returns:
+        Tuple of (jsonify response, status code)
+    """
+    logger.error(f"Error in {endpoint}: {str(e)}")
+    logger.error(traceback.format_exc())
+    
+    # Only expose detailed errors in debug mode
+    if DEBUG_MODE:
+        error_message = f"Server error: {str(e)}"
+    else:
+        error_message = "Internal server error occurred"
+    
+    return jsonify({"error": error_message}), 500
+
+
 @app.route("/api/command", methods=["POST"])
 def generic_command():
     """Execute any command provided in the request."""
@@ -156,11 +179,7 @@ def generic_command():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in command endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "command endpoint")
 
 
 @app.route("/api/tools/nmap", methods=["POST"])
@@ -193,11 +212,7 @@ def nmap():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in nmap endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "nmap endpoint")
 
 @app.route("/api/tools/gobuster", methods=["POST"])
 def gobuster():
@@ -230,11 +245,7 @@ def gobuster():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in gobuster endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "gobuster endpoint")
 
 @app.route("/api/tools/dirb", methods=["POST"])
 def dirb():
@@ -259,11 +270,7 @@ def dirb():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in dirb endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "dirb endpoint")
 
 @app.route("/api/tools/nikto", methods=["POST"])
 def nikto():
@@ -287,11 +294,7 @@ def nikto():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in nikto endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "nikto endpoint")
 
 @app.route("/api/tools/sqlmap", methods=["POST"])
 def sqlmap():
@@ -319,11 +322,7 @@ def sqlmap():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in sqlmap endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "sqlmap endpoint")
 
 @app.route("/api/tools/metasploit", methods=["POST"])
 def metasploit():
@@ -366,11 +365,7 @@ def metasploit():
         
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in metasploit endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "metasploit endpoint")
 
 @app.route("/api/tools/hydra", methods=["POST"])
 def hydra():
@@ -417,11 +412,7 @@ def hydra():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in hydra endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "hydra endpoint")
 
 @app.route("/api/tools/john", methods=["POST"])
 def john():
@@ -455,11 +446,7 @@ def john():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in john endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "john endpoint")
 
 @app.route("/api/tools/wpscan", methods=["POST"])
 def wpscan():
@@ -483,11 +470,7 @@ def wpscan():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in wpscan endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "wpscan endpoint")
 
 @app.route("/api/tools/enum4linux", methods=["POST"])
 def enum4linux():
@@ -508,11 +491,7 @@ def enum4linux():
         result = execute_command(command)
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error in enum4linux endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, "enum4linux endpoint")
 
 
 # Health check endpoint
@@ -640,11 +619,7 @@ def execute_tool(tool_name):
         return tool_handlers[tool_name]()
         
     except Exception as e:
-        logger.error(f"Error in dynamic tool execution for {tool_name}: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "error": f"Server error: {str(e)}"
-        }), 500
+        return handle_error(e, f"dynamic tool execution for {tool_name}")
 
 @app.errorhandler(404)
 def not_found(error):
@@ -697,15 +672,19 @@ if __name__ == "__main__":
             from waitress import serve
             logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Production Mode with Waitress)")
             logger.warning("Production mode: Debug mode is disabled")
+            # Force debug mode off in production
+            DEBUG_MODE = False
             serve(app, host=args.host, port=API_PORT, threads=4)
         except ImportError:
             logger.error("Waitress is not installed. Install it with: pip install waitress")
             logger.info("Falling back to development server...")
             logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Development Mode)")
-            app.run(host=args.host, port=API_PORT, debug=DEBUG_MODE)
+            # Force debug off when falling back in production mode
+            app.run(host=args.host, port=API_PORT, debug=False)
     else:
         logger.info(f"Starting Kali Linux Tools API Server on {args.host}:{API_PORT} (Development Mode)")
         if not DEBUG_MODE:
             logger.warning("Running development server in production is not recommended.")
             logger.warning("Use --production flag to run with Waitress for production deployments.")
-        app.run(host=args.host, port=API_PORT, debug=DEBUG_MODE)
+        # Only enable debug in development mode if explicitly requested
+        app.run(host=args.host, port=API_PORT, debug=DEBUG_MODE and args.debug)
