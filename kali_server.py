@@ -154,13 +154,9 @@ def handle_error(e: Exception, endpoint: str) -> tuple:
     logger.error(f"Error in {endpoint}: {str(e)}")
     logger.error(traceback.format_exc())
     
-    # Only expose detailed errors in debug mode
-    if DEBUG_MODE:
-        error_message = f"Server error: {str(e)}"
-    else:
-        error_message = "Internal server error occurred"
-    
-    return jsonify({"error": error_message}), 500
+    # Never expose detailed errors to clients for security
+    # Details are logged for admin review
+    return jsonify({"error": "Internal server error occurred"}), 500
 
 
 @app.route("/api/command", methods=["POST"])
@@ -686,5 +682,9 @@ if __name__ == "__main__":
         if not DEBUG_MODE:
             logger.warning("Running development server in production is not recommended.")
             logger.warning("Use --production flag to run with Waitress for production deployments.")
-        # Only enable debug in development mode if explicitly requested
-        app.run(host=args.host, port=API_PORT, debug=DEBUG_MODE and args.debug)
+        # Only enable debug in development mode if explicitly requested with --debug flag
+        # This is safe: both DEBUG_MODE and args.debug must be True
+        enable_debug = bool(DEBUG_MODE and args.debug)
+        if enable_debug:
+            logger.warning("Debug mode is enabled - this should only be used in development!")
+        app.run(host=args.host, port=API_PORT, debug=enable_debug)
